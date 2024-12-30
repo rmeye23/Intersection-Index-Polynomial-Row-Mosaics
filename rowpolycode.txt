@@ -1,0 +1,461 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+def assign_crossing_number_and_sign(grid):
+    crossing_number = 1
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if grid[i][j] in [13, 14, 15, 16]:
+                sign = 1 if grid[i][j] in [14, 16] else -1
+                print(f"sign({crossing_number}) = {sign}")
+                crossing_number += 1
+
+def draw_straight_line(x1, y1, x2, y2, color, with_arrow=False):
+    plt.plot([x1, x2], [y1, y2], color=color, linewidth=2)
+    if with_arrow:
+        dx = x2 - x1
+        dy = y2 - y1
+        arrow_x = x2 - 0.15 * dx
+        arrow_y = y2 - 0.15 * dy
+        plt.arrow(arrow_x, arrow_y, dx*0.1, dy*0.1, 
+                 head_width=0.1, head_length=0.1, 
+                 fc=color, ec=color)
+
+def draw_smoothed_curve(x, y, start_pos, end_pos, color):
+    if start_pos == 'bottom' and end_pos == 'left':
+        x_start, y_start = x + 0.5, y
+        x_end, y_end = x, y + 0.5
+    elif start_pos == 'top' and end_pos == 'right':
+        x_start, y_start = x + 0.5, y + 1
+        x_end, y_end = x + 1, y + 0.5
+    elif start_pos == 'left' and end_pos == 'top':
+        x_start, y_start = x, y + 0.5
+        x_end, y_end = x + 0.5, y + 1
+    elif start_pos == 'right' and end_pos == 'bottom':
+        x_start, y_start = x + 1, y + 0.5
+        x_end, y_end = x + 0.5, y
+
+    x_control = (x_start + x_end) / 2
+    y_control = (y_start + y_end) / 2
+    
+    t = np.linspace(0, 1, 100)
+    x_curve = (1 - t) ** 2 * x_start + 2 * (1 - t) * t * x_control + t ** 2 * x_end
+    y_curve = (1 - t) ** 2 * y_start + 2 * (1 - t) * t * y_control + t ** 2 * y_end
+    
+    plt.plot(x_curve, y_curve, color=color, linewidth=2)
+    
+    arrow_t = 0.8
+    arrow_x = (1 - arrow_t) ** 2 * x_start + 2 * (1 - arrow_t) * arrow_t * x_control + arrow_t ** 2 * x_end
+    arrow_y = (1 - arrow_t) ** 2 * y_start + 2 * (1 - arrow_t) * arrow_t * y_control + arrow_t ** 2 * y_end
+    dx = x_end - arrow_x
+    dy = y_end - arrow_y
+    plt.arrow(arrow_x, arrow_y, dx*0.2, dy*0.2, head_width=0.1, head_length=0.1, fc=color, ec=color)
+
+def determine_component_colors(grid, smoothing_pos, edge_labels):
+    rows, cols = len(grid), len(grid[0])
+    i, j = smoothing_pos
+    colors = {}
+    
+    if grid[i][j] == 13:  # T9
+        colors[(i, j, 'top')] = 'blue'
+        colors[(i, j, 'bottom')] = 'red'
+        colors[(i, j, 'left')] = 'red'
+        colors[(i, j, 'right')] = 'blue'
+        
+        bottom_letter = edge_labels[2*cols + rows - 1 - j]
+        left_letter = edge_labels[2*cols + 2*rows - 1 - i]
+        red_letters = set([bottom_letter, left_letter])
+        
+        changed = True
+        while changed:
+            changed = False
+            for x in range(rows):
+                for y in range(cols):
+                    if grid[x][y] in [13, 14, 15, 16]:
+                        top_letter = edge_labels[y]
+                        bottom_letter = edge_labels[2*cols + rows - 1 - y]
+                        
+                        if top_letter in red_letters or bottom_letter in red_letters:
+                            if (x, y, 'top') not in colors:
+                                colors[(x, y, 'top')] = 'red'
+                                red_letters.add(top_letter)
+                                changed = True
+                            if (x, y, 'bottom') not in colors:
+                                colors[(x, y, 'bottom')] = 'red'
+                                red_letters.add(bottom_letter)
+                                changed = True
+                        
+                        if y <= j:
+                            left_letter = edge_labels[2*cols + 2*rows - 1 - x]
+                            if left_letter in red_letters:
+                                if (x, y, 'left') not in colors:
+                                    colors[(x, y, 'left')] = 'red'
+                                    changed = True
+                                if (x, y, 'right') not in colors:
+                                    colors[(x, y, 'right')] = 'red'
+                                    changed = True
+                        
+                        for pos in ['top', 'bottom', 'left', 'right']:
+                            if (x, y, pos) not in colors:
+                                colors[(x, y, pos)] = 'blue'
+                            
+    elif grid[i][j] == 14:  # T9 negative
+        colors[(i, j, 'top')] = 'blue'
+        colors[(i, j, 'bottom')] = 'blue'
+        colors[(i, j, 'left')] = 'red'
+        colors[(i, j, 'right')] = 'red'
+        
+        top_letter = edge_labels[j]
+        bottom_letter = edge_labels[2*cols + rows - 1 - j]
+        blue_letters = set([top_letter, bottom_letter])
+        
+        changed = True
+        while changed:
+            changed = False
+            for x in range(rows):
+                for y in range(cols):
+                    if grid[x][y] in [13, 14, 15, 16]:
+                        curr_top = edge_labels[y]
+                        curr_bottom = edge_labels[2*cols + rows - 1 - y]
+                        
+                        if curr_top in blue_letters:
+                            if (x, y, 'top') not in colors:
+                                colors[(x, y, 'top')] = 'blue'
+                                blue_letters.add(curr_top)
+                                changed = True
+                            if (x, y, 'bottom') not in colors:
+                                colors[(x, y, 'bottom')] = 'blue'
+                                blue_letters.add(curr_bottom)
+                                changed = True
+                        elif curr_bottom in blue_letters:
+                            if (x, y, 'bottom') not in colors:
+                                colors[(x, y, 'bottom')] = 'blue'
+                                blue_letters.add(curr_bottom)
+                                changed = True
+                            if (x, y, 'top') not in colors:
+                                colors[(x, y, 'top')] = 'blue'
+                                blue_letters.add(curr_top)
+                                changed = True
+                                
+                        if (x, y, 'left') not in colors:
+                            colors[(x, y, 'left')] = 'red'
+                        if (x, y, 'right') not in colors:
+                            colors[(x, y, 'right')] = 'red'
+                            
+    elif grid[i][j] == 15:  # T10 negative
+        colors[(i, j, 'left')] = 'blue'
+        colors[(i, j, 'top')] = 'blue'
+        colors[(i, j, 'right')] = 'red'
+        colors[(i, j, 'bottom')] = 'red'
+        
+        top_letter = edge_labels[j]
+        left_letter = edge_labels[2*cols + 2*rows - 1 - i]
+        blue_letters = set([top_letter, left_letter])
+        
+        changed = True
+        while changed:
+            changed = False
+            for x in range(rows):
+                for y in range(cols):
+                    if grid[x][y] in [13, 14, 15, 16]:
+                        top_letter = edge_labels[y]
+                        bottom_letter = edge_labels[2*cols + rows - 1 - y]
+                        
+                        if top_letter in blue_letters or bottom_letter in blue_letters:
+                            if (x, y, 'top') not in colors:
+                                colors[(x, y, 'top')] = 'blue'
+                                blue_letters.add(top_letter)
+                                changed = True
+                            if (x, y, 'bottom') not in colors:
+                                colors[(x, y, 'bottom')] = 'blue'
+                                blue_letters.add(bottom_letter)
+                                changed = True
+                        
+                        if y <= j:
+                            left_letter = edge_labels[2*cols + 2*rows - 1 - x]
+                            if left_letter in blue_letters:
+                                if (x, y, 'left') not in colors:
+                                    colors[(x, y, 'left')] = 'blue'
+                                    changed = True
+                                if (x, y, 'right') not in colors:
+                                    colors[(x, y, 'right')] = 'blue'
+                                    changed = True
+                        
+                        for pos in ['top', 'bottom', 'left', 'right']:
+                            if (x, y, pos) not in colors:
+                                colors[(x, y, pos)] = 'red'
+                                
+    else:  # T10
+        colors[(i, j, 'top')] = 'blue'
+        colors[(i, j, 'bottom')] = 'red'
+        colors[(i, j, 'left')] = 'red'
+        colors[(i, j, 'right')] = 'blue'
+        
+        bottom_letter = edge_labels[2*cols + rows - 1 - j]
+        left_letter = edge_labels[2*cols + 2*rows - 1 - i]
+        red_letters = set([bottom_letter, left_letter])
+        
+        changed = True
+        while changed:
+            changed = False
+            for x in range(rows):
+                for y in range(cols):
+                    if grid[x][y] in [13, 14, 15, 16]:
+                        top_letter = edge_labels[y]
+                        bottom_letter = edge_labels[2*cols + rows - 1 - y]
+                        
+                        if top_letter in red_letters or bottom_letter in red_letters:
+                            if (x, y, 'top') not in colors:
+                                colors[(x, y, 'top')] = 'red'
+                                red_letters.add(top_letter)
+                                changed = True
+                            if (x, y, 'bottom') not in colors:
+                                colors[(x, y, 'bottom')] = 'red'
+                                red_letters.add(bottom_letter)
+                                changed = True
+                        
+                        if y <= j:
+                            left_letter = edge_labels[2*cols + 2*rows - 1 - x]
+                            if left_letter in red_letters:
+                                if (x, y, 'left') not in colors:
+                                    colors[(x, y, 'left')] = 'red'
+                                    changed = True
+                                if (x, y, 'right') not in colors:
+                                    colors[(x, y, 'right')] = 'red'
+                                    changed = True
+                        
+                        for pos in ['top', 'bottom', 'left', 'right']:
+                            if (x, y, pos) not in colors:
+                                colors[(x, y, pos)] = 'blue'
+    
+    return colors
+
+def calculate_intersection_number(grid, colors, smoothing_pos):
+    total = 0
+    rows, cols = len(grid), len(grid[0])
+    
+    for i in range(rows):
+        for j in range(cols):
+            if grid[i][j] in [13, 14, 15, 16] and (i, j) != smoothing_pos:
+                v_color = colors.get((i, j, 'top'), 'black')
+                h_color = colors.get((i, j, 'left'), 'black')
+                
+                if v_color != h_color:
+                    if grid[i][j] in [13, 16]:
+                        total += 1 if v_color == 'blue' else -1
+                    else:
+                        total += 1 if v_color == 'red' else -1
+                        
+    return total
+
+def calculate_polynomial(grid, colors_dict):
+    """Calculate p_t(k) = sum sign(d)(t^(|i(d)|)-1) where d is the crossing"""
+    max_power = 10
+    coefficients = [0] * (max_power + 1)
+    constant_term = 0
+    
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if grid[i][j] in [13, 14, 15, 16]:
+                sign = 1 if grid[i][j] in [14, 16] else -1
+                smoothing_pos = (i, j)
+                i_d = calculate_intersection_number(grid, colors_dict[smoothing_pos], smoothing_pos)
+                
+                if i_d != 0:
+                    coefficients[abs(i_d)] += sign
+                    constant_term -= sign
+
+    terms = []
+    
+    # Add terms from highest degree to lowest
+    for power in range(max_power, -1, -1):
+        coef = coefficients[power]
+        if coef != 0:
+            if power == 0:
+                terms.append(str(coef))
+            elif power == 1:
+                if coef == 1:
+                    terms.append("t")
+                elif coef == -1:
+                    terms.append("-t")
+                else:
+                    terms.append(f"{coef}t")
+            else:
+                if coef == 1:
+                    terms.append(f"t^{power}")
+                elif coef == -1:
+                    terms.append(f"-t^{power}")
+                else:
+                    terms.append(f"{coef}t^{power}")
+    
+    if constant_term != 0:
+        terms.append(str(constant_term))
+    
+    if not terms:
+        return "0"
+        
+    polynomial = ""
+    for i, term in enumerate(terms):
+        if i == 0 and not term.startswith('-'):
+            polynomial += term
+        else:
+            polynomial += (" + " + term) if not term.startswith('-') else (" " + term)
+            
+    return polynomial
+
+def draw_grid(grid, edge_labels, smoothing_pos=None):
+    """Draw the grid with optional smoothing and intersection number"""
+    rows, cols = len(grid), len(grid[0])
+    plt.figure(figsize=(cols, rows))
+    
+    # Draw grid lines
+    for i in range(rows + 1):
+        plt.plot([0, cols], [i, i], 'k-', alpha=0.3)
+    for i in range(cols + 1):
+        plt.plot([i, i], [0, rows], 'k-', alpha=0.3)
+    
+    colors = None
+    if smoothing_pos:
+        colors = determine_component_colors(grid, smoothing_pos, edge_labels)
+        
+        # Calculate and display intersection number
+        intersection_num = calculate_intersection_number(grid, colors, smoothing_pos)
+        crossing_num = sum(1 for i in range(rows) for j in range(cols) 
+                         if grid[i][j] in [13, 14, 15, 16] and (i, j) < smoothing_pos) + 1
+        plt.text(cols/2, -0.6, f'i({crossing_num}) = {intersection_num}', 
+                ha='center', va='center', fontsize=12)
+    
+    for i in range(rows):
+        for j in range(cols):
+            if smoothing_pos and (i, j) == smoothing_pos:
+                if grid[i][j] == 13:
+                    x_start, y_start = j + 0.5, i
+                    x_end, y_end = j, i + 0.5
+                    x_control = (x_start + x_end) / 2
+                    y_control = (y_start + y_end) / 2
+                    t = np.linspace(0, 1, 100)
+                    x_curve = (1 - t) ** 2 * x_start + 2 * (1 - t) * t * x_control + t ** 2 * x_end
+                    y_curve = (1 - t) ** 2 * y_start + 2 * (1 - t) * t * y_control + t ** 2 * y_end
+                    plt.plot(x_curve, y_curve, color='red', linewidth=2)
+                    arrow_t = 0.2
+                    arrow_x = (1 - arrow_t) ** 2 * x_start + 2 * (1 - arrow_t) * arrow_t * x_control + arrow_t ** 2 * x_end
+                    arrow_y = (1 - arrow_t) ** 2 * y_start + 2 * (1 - arrow_t) * arrow_t * y_control + arrow_t ** 2 * y_end
+                    dx = (x_start - x_end) * 0.2
+                    dy = (y_start - y_end) * 0.2
+                    plt.arrow(arrow_x, arrow_y, dx*0.2, dy*0.2, 
+                            head_width=0.1, head_length=0.1, fc='red', ec='red')
+                    draw_smoothed_curve(j, i, 'top', 'right', 'blue')
+                elif grid[i][j] == 16:
+                    x_start, y_start = j + 0.5, i
+                    x_end, y_end = j, i + 0.5
+                    x_control = (x_start + x_end) / 2
+                    y_control = (y_start + y_end) / 2
+                    t = np.linspace(0, 1, 100)
+                    x_curve = (1 - t) ** 2 * x_start + 2 * (1 - t) * t * x_control + t ** 2 * x_end
+                    y_curve = (1 - t) ** 2 * y_start + 2 * (1 - t) * t * y_control + t ** 2 * y_end
+                    plt.plot(x_curve, y_curve, color='red', linewidth=2)
+                    arrow_t = 0.2
+                    arrow_x = (1 - arrow_t) ** 2 * x_start + 2 * (1 - arrow_t) * arrow_t * x_control + arrow_t ** 2 * x_end
+                    arrow_y = (1 - arrow_t) ** 2 * y_start + 2 * (1 - arrow_t) * arrow_t * y_control + arrow_t ** 2 * y_end
+                    dx = (x_start - x_end) * 0.2
+                    dy = (y_start - y_end) * 0.2
+                    plt.arrow(arrow_x, arrow_y, dx*0.2, dy*0.2, 
+                            head_width=0.1, head_length=0.1, fc='red', ec='red')
+                    draw_smoothed_curve(j, i, 'top', 'right', 'blue')
+                elif grid[i][j] in [14, 15]:
+                    x_start, y_start = j + 1, i + 0.5
+                    x_end, y_end = j + 0.5, i
+                    x_control = (x_start + x_end) / 2
+                    y_control = (y_start + y_end) / 2
+                    t = np.linspace(0, 1, 100)
+                    x_curve = (1 - t) ** 2 * x_start + 2 * (1 - t) * t * x_control + t ** 2 * x_end
+                    y_curve = (1 - t) ** 2 * y_start + 2 * (1 - t) * t * y_control + t ** 2 * y_end
+                    plt.plot(x_curve, y_curve, color='red', linewidth=2)
+                    arrow_t = 0.2
+                    arrow_x = (1 - arrow_t) ** 2 * x_start + 2 * (1 - arrow_t) * arrow_t * x_control + arrow_t ** 2 * x_end
+                    arrow_y = (1 - arrow_t) ** 2 * y_start + 2 * (1 - arrow_t) * arrow_t * y_control + arrow_t ** 2 * y_end
+                    dx = (x_start - x_end) * 0.2
+                    dy = (y_start - y_end) * 0.2
+                    plt.arrow(arrow_x, arrow_y, dx*0.2, dy*0.2, 
+                            head_width=0.1, head_length=0.1, fc='red', ec='red')
+                    draw_smoothed_curve(j, i, 'left', 'top', 'blue')
+            else:
+                if grid[i][j] in [13, 14, 15, 16]:
+                    if smoothing_pos:
+                        h_color = colors.get((i, j, 'left'), 'black')
+                        v_color = colors.get((i, j, 'top'), 'black')
+                    else:
+                        h_color = v_color = 'black'
+                    
+                    if grid[i][j] in [13, 14]:
+                        draw_straight_line(j, i + 0.5, j + 1, i + 0.5, h_color, True)
+                        draw_straight_line(j + 0.5, i, j + 0.5, i + 0.4, v_color)
+                        draw_straight_line(j + 0.5, i + 0.6, j + 0.5, i + 1, v_color)
+                        
+                        if grid[i][j] == 13:
+                            plt.arrow(j + 0.5, i + 0.15, 0, -0.05, head_width=0.1, head_length=0.1, fc=v_color, ec=v_color)
+                        else:
+                            plt.arrow(j + 0.5, i + 0.85, 0, 0.05, head_width=0.1, head_length=0.1, fc=v_color, ec=v_color)
+                    else:
+                        draw_straight_line(j, i + 0.5, j + 0.4, i + 0.5, h_color)
+                        draw_straight_line(j + 0.6, i + 0.5, j + 1, i + 0.5, h_color, True)
+                        draw_straight_line(j + 0.5, i, j + 0.5, i + 1, v_color)
+                        
+                        if grid[i][j] == 15:
+                            plt.arrow(j + 0.5, i + 0.85, 0, 0.05, head_width=0.1, head_length=0.1, fc=v_color, ec=v_color)
+                        else:
+                            plt.arrow(j + 0.5, i + 0.15, 0, -0.05, head_width=0.1, head_length=0.1, fc=v_color, ec=v_color)
+    
+    for i in range(cols):
+        plt.text(i + 0.5, rows + 0.2, edge_labels[i], ha='center', va='bottom')
+    for i in range(rows):
+        plt.text(cols + 0.2, rows - i - 0.5, edge_labels[cols + i], ha='left', va='center')
+    for i in range(cols - 1, -1, -1):
+        plt.text(i + 0.5, -0.2, edge_labels[2 * cols + rows - 1 - i], ha='center', va='top')
+    for i in range(rows - 1, -1, -1):
+        plt.text(-0.2, i + 0.5, edge_labels[2 * cols + 2 * rows - 1 - i], ha='right', va='center')
+
+    plt.gca().set_aspect('equal')
+    plt.axis('off')
+    plt.show()
+
+def main():
+    print("Enter the dimensions of the grid:")
+    rows = 1  # Fixed to 1 row as per paper examples
+    cols = int(input("Enter number of columns: "))
+    
+    print("\nEnter the grid using numbers (13-16 for crossings):")
+    print("13: Negative T9")
+    print("14: Positive T9")
+    print("15: Negative T10")
+    print("16: Positive T10")
+    
+    grid = []
+    row = list(map(int, input(f"Enter {cols} numbers separated by spaces: ").split()))
+    grid.append(row)
+    
+    edge_labels = input(f"Enter the edge labels (length should be {2*cols + 2}): ")
+    
+    print("\nOriginal diagram:")
+    draw_grid(grid, edge_labels)
+
+    assign_crossing_number_and_sign(grid)
+    
+    crossings = [(i, j) for i in range(len(grid)) for j in range(len(grid[0])) 
+                if grid[i][j] in [13, 14, 15, 16]]
+    
+    colors_dict = {}
+    for crossing in crossings:
+        colors_dict[crossing] = determine_component_colors(grid, crossing, edge_labels)
+    
+    view_smoothings = input("\nDo you want to see the smoothings? (yes/no): ").lower()
+    if view_smoothings == 'yes':
+        for crossing in crossings:
+            print(f"\nSmoothing at position {crossing}:")
+            draw_grid(grid, edge_labels, crossing)
+            
+    polynomial = calculate_polynomial(grid, colors_dict)
+    print(f"\nPolynomial p_t(k) = {polynomial}")
+
+if __name__ == "__main__":
+    main()
