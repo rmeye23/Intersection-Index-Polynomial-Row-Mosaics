@@ -56,7 +56,7 @@ def determine_component_colors(grid, smoothing_pos, edge_labels):
     i, j = smoothing_pos
     colors = {}
     
-    if grid[i][j] == 13:  # T9
+    if grid[i][j] == 13:  # T9 - FIXED: Ensure proper color updates
         colors[(i, j, 'top')] = 'blue'
         colors[(i, j, 'bottom')] = 'red'
         colors[(i, j, 'left')] = 'red'
@@ -73,28 +73,31 @@ def determine_component_colors(grid, smoothing_pos, edge_labels):
                 for y in range(cols):
                     if grid[x][y] in [13, 14, 15, 16]:
                         top_letter = edge_labels[y]
-                        bottom_letter = edge_labels[2*cols + rows - 1 - y]
+                        bottom_letter_check = edge_labels[2*cols + rows - 1 - y]
                         
-                        if top_letter in red_letters or bottom_letter in red_letters:
-                            if (x, y, 'top') not in colors:
+                        # Vertical propagation - check ALL tiles
+                        if top_letter in red_letters or bottom_letter_check in red_letters:
+                            if (x, y, 'top') not in colors or colors[(x, y, 'top')] != 'red':
                                 colors[(x, y, 'top')] = 'red'
                                 red_letters.add(top_letter)
                                 changed = True
-                            if (x, y, 'bottom') not in colors:
+                            if (x, y, 'bottom') not in colors or colors[(x, y, 'bottom')] != 'red':
                                 colors[(x, y, 'bottom')] = 'red'
-                                red_letters.add(bottom_letter)
+                                red_letters.add(bottom_letter_check)
                                 changed = True
                         
+                        # Horizontal propagation
                         if y <= j:
-                            left_letter = edge_labels[2*cols + 2*rows - 1 - x]
-                            if left_letter in red_letters:
-                                if (x, y, 'left') not in colors:
+                            left_letter_check = edge_labels[2*cols + 2*rows - 1 - x]
+                            if left_letter_check in red_letters:
+                                if (x, y, 'left') not in colors or colors[(x, y, 'left')] != 'red':
                                     colors[(x, y, 'left')] = 'red'
                                     changed = True
-                                if (x, y, 'right') not in colors:
+                                if (x, y, 'right') not in colors or colors[(x, y, 'right')] != 'red':
                                     colors[(x, y, 'right')] = 'red'
                                     changed = True
                         
+                        # Fill in remaining colors as blue (only if not already set)
                         for pos in ['top', 'bottom', 'left', 'right']:
                             if (x, y, pos) not in colors:
                                 colors[(x, y, pos)] = 'blue'
