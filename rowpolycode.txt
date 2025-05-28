@@ -56,7 +56,7 @@ def determine_component_colors(grid, smoothing_pos, edge_labels):
     i, j = smoothing_pos
     colors = {}
     
-    if grid[i][j] == 13:  # T9 - FIXED: Ensure proper color updates
+    if grid[i][j] == 13:  # T9 - Ensure proper color updates
         colors[(i, j, 'top')] = 'blue'
         colors[(i, j, 'bottom')] = 'red'
         colors[(i, j, 'left')] = 'red'
@@ -102,7 +102,7 @@ def determine_component_colors(grid, smoothing_pos, edge_labels):
                             if (x, y, pos) not in colors:
                                 colors[(x, y, pos)] = 'blue'
                             
-    elif grid[i][j] == 14:  # T9 positive - FIXED VERSION
+    elif grid[i][j] == 14:  # T9 positive
         colors[(i, j, 'top')] = 'blue'
         colors[(i, j, 'bottom')] = 'blue'
         colors[(i, j, 'left')] = 'red'
@@ -131,7 +131,6 @@ def determine_component_colors(grid, smoothing_pos, edge_labels):
                                 blue_letters.add(curr_bottom)
                                 changed = True
                         
-                        # Fixed: Added the horizontal propagation logic similar to tile 15
                         if y <= j:
                             left_letter = edge_labels[2*cols + 2*rows - 1 - x]
                             right_letter = edge_labels[cols + x]
@@ -195,7 +194,7 @@ def determine_component_colors(grid, smoothing_pos, edge_labels):
                             if (x, y, pos) not in colors:
                                 colors[(x, y, pos)] = 'red'
                                 
-    else:  # T10 (tile 16) - FIXED VERSION
+    else:  # T10 (tile 16)
         colors[(i, j, 'top')] = 'blue'
         colors[(i, j, 'bottom')] = 'red'
         colors[(i, j, 'left')] = 'red'
